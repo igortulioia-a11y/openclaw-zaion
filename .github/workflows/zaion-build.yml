@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/zaionext/**'
+      - 'extensions/zaion-**'
       - 'Dockerfile'
       - '.github/workflows/zaion-build.yml'
   workflow_dispatch:
@@ -38,9 +39,10 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            OPENCLAW_EXTENSIONS=zaion-todowrite
           tags: |
             ghcr.io/${{ github.repository_owner }}/openclaw-zaion:latest
             ghcr.io/${{ github.repository_owner }}/openclaw-zaion:sha-${{ steps.sha.outputs.short }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-# trigger reindex
