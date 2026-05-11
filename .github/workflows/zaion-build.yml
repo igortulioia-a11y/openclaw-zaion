@@ -18,22 +18,48 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Patch build config for fork
+      - name: Patch build config for fork (CI-only, repo files untouched in commit)
         run: |
-          # Allow lockfile updates for our extension workspace addition
+          # 1. Allow lockfile regeneration for new workspace package
           cp Dockerfile Dockerfile.zaion
           sed -i 's/--frozen-lockfile/--no-frozen-lockfile/g' Dockerfile.zaion
-          # Disable minimum release age (we install whatever pnpm resolves)
+
+          # 2. Drop minimumReleaseAge gate (we accept whatever pnpm resolves)
           sed -i 's/^minimumReleaseAge:.*$/minimumReleaseAge: 0/' pnpm-workspace.yaml
-          # Allow unused patchedDependencies (they target versions pnpm may not pin to)
-          # pnpm 9+ reads strictPatchedDependencies at root level
-          if ! grep -q '^strictPatchedDependencies' pnpm-workspace.yaml; then
-            echo '' >> pnpm-workspace.yaml
-            echo 'strictPatchedDependencies: false' >> pnpm-workspace.yaml
-          fi
+
+          # 3. Drop patchedDependencies section (causes ERR_PNPM_UNUSED_PATCH on regen)
+          # The 'patchedDependencies:' key block is at top of yaml; delete the key + indented block
+          python3 <<'PYEOF'
+          import re
+          src = open('pnpm-workspace.yaml').read()
+          # Match 'patchedDependencies:' line + following indented lines
+          out_lines = []
+          skip = False
+          for line in src.splitlines():
+              stripped = line.lstrip()
+              if line.startswith('patchedDependencies:'):
+                  skip = True
+                  continue
+              if skip:
+                  # If line is indented (continuation), skip; else stop skipping
+                  if line.startswith('  ') or line.strip() == '':
+                      if line.strip() == '':
+                          # blank line may belong to block or separate; keep if next line not indented
+                          continue
+                      continue
+                  else:
+                      skip = False
+              out_lines.append(line)
+          open('pnpm-workspace.yaml','w').write('
+'.join(out_lines) + '
+')
+          PYEOF
+
           echo '--- Verifying patches ---'
           grep -nE 'no-frozen-lockfile' Dockerfile.zaion | head -3
-          grep -nE '^(minimumReleaseAge|strictPatchedDependencies)' pnpm-workspace.yaml
+          grep -nE '^minimumReleaseAge' pnpm-workspace.yaml || echo '(no minimumReleaseAge line)'
+          echo 'patchedDependencies section gone?'
+          grep -c 'patchedDependencies' pnpm-workspace.yaml || true
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
