@@ -1,0 +1,18 @@
+{
+  "id": "zaion-todowrite",
+  "name": "Zaion TodoWrite",
+  "description": "In-session task tracking tool. Helps the agent stay focused on multi-step work by maintaining a structured todo list.",
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": ["todo_write"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": { "type": "boolean", "default": true }
+    }
+  }
+}
