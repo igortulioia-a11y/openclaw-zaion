@@ -18,12 +18,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Patch Dockerfile for non-frozen lockfile (allow extension workspace add)
+      - name: Patch build files for fork (no-frozen-lockfile + minimumReleaseAge=0)
         run: |
           cp Dockerfile Dockerfile.zaion
           sed -i 's/--frozen-lockfile/--no-frozen-lockfile/g' Dockerfile.zaion
-          echo "--- Patched lines ---"
-          grep -n 'no-frozen-lockfile' Dockerfile.zaion || true
+          sed -i 's/^minimumReleaseAge:.*$/minimumReleaseAge: 0/' pnpm-workspace.yaml
+          echo "--- Dockerfile.zaion patches ---"
+          grep -n 'no-frozen-lockfile' Dockerfile.zaion | head -5
+          echo "--- pnpm-workspace.yaml minimumReleaseAge ---"
+          grep -n 'minimumReleaseAge' pnpm-workspace.yaml | head -3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
