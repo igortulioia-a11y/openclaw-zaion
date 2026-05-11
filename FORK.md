@@ -1,16 +1,17 @@
-# openclaw-zaion — Fork pessoal do openclaw
+# openclaw-zaion - Fork pessoal do openclaw
 
-Fork de [openclaw/openclaw](https://github.com/openclaw/openclaw) (MIT) com adicoes proprias pro agente "Zaion" do Igor.
+Fork de [openclaw/openclaw](https://github.com/openclaw/openclaw) (MIT) com extensoes proprias pro agente "Zaion" do Igor.
 
-## Filosofia: ADD-ONLY
+## Filosofia: ADD-ONLY via plugin system
 
-Nao modificamos arquivos do upstream. Toda adicao vai em `src/zaionext/` e e registrada via pontos de extensao existentes do openclaw (plugin system, extensions, skill loader).
+O openclaw tem plugin system maduro. Nossa adicao usa esse sistema, **sem mexer no `src/` upstream**.
 
-Razao: manter merge upstream trivial. Conflitos so nos poucos arquivos de registro (se houver).
+Cada feature nossa vira uma extension em `extensions/zaion-<feature>/`:
+- `extensions/zaion-todowrite/` - task tracking interno (anti-drift)
+- `extensions/zaion-toolsearch/` - schema deferido pra tools
+- `extensions/zaion-coordinator/` - multi-agent orchestration
 
-## O que tem aqui que nao tem no upstream
-
-Ver `src/zaionext/README.md` pra lista atualizada. Por enquanto, so a infra do fork.
+Padrao: cada pasta tem `package.json` + `openclaw.plugin.json` + `index.ts` (entry point que chama `definePluginEntry`).
 
 ## Como sincar com upstream
 
@@ -19,7 +20,7 @@ git remote add upstream https://github.com/openclaw/openclaw.git
 git fetch upstream
 git checkout main
 git merge upstream/main
-# resolver conflitos (se houver - geralmente so em arquivos de registro)
+# conflitos só se houver pacote novo upstream com mesmo nome (extremamente raro)
 git push origin main
 ```
 
@@ -29,17 +30,27 @@ GitHub Action `.github/workflows/zaion-build.yml` builda imagem Docker e empurra
 - Tag: `ghcr.io/igortulioia-a11y/openclaw-zaion:latest`
 - Tag por commit: `ghcr.io/igortulioia-a11y/openclaw-zaion:sha-<short>`
 
-Trigger: push em `main` (manual via `workflow_dispatch` tambem ok).
+Build inclui nossas extensions via `--build-arg OPENCLAW_EXTENSIONS=zaion-todowrite,zaion-toolsearch,zaion-coordinator`.
 
-Easypanel puxa essa imagem (configurado em `jarvis/openclaw-zaion` quando subir).
-
-## Regras pra contribuir aqui
-
-1. **Nao tocar em arquivo do upstream.** Se precisar alterar comportamento existente, abrir issue/discussion no upstream.
-2. **Tudo novo em `src/zaionext/`** — pasta isolada.
-3. **Registrar via plugin/extension system existente.**
-4. **Atualizar `src/zaionext/README.md`** com o que cada submodulo faz.
+Easypanel pega essa imagem (configurado em `jarvis/openclaw-zaion` quando subir).
 
 ## Actions
 
-Workflows herdados do upstream estao **desabilitados** (50+ pipelines do projeto openclaw que nao se aplicam ao fork pessoal). So o nosso `zaion-build.yml` deve rodar. Pra religar Actions: Settings > Actions > General > "Allow all actions and reusable workflows".
+Os 54 workflows herdados do upstream estao **desabilitados**. So o nosso `zaion-build.yml` roda. Pra religar algum herdado, ir em Settings > Actions > General + enable workflow individual.
+
+## Regras pra contribuir
+
+1. **Nao tocar em arquivo do upstream** (anything outside `extensions/zaion-*` and `.github/workflows/zaion-build.yml` and `FORK.md`).
+2. **Cada feature = uma extension** sob `extensions/zaion-<feature>/`.
+3. **Manifest declarativo** em `openclaw.plugin.json` (id, activation, configSchema).
+4. **Sem deep import do core** - so de `openclaw/plugin-sdk/*`.
+5. **Testar build local** via pnpm antes de push se possivel.
+
+## Status
+
+Iteracao atual:
+- [x] Fork criado, Actions desabilitado nos herdados
+- [x] Workflow `zaion-build.yml` criado e funcional
+- [ ] Extension `zaion-todowrite` - em desenvolvimento
+- [ ] Extension `zaion-toolsearch` - planejada
+- [ ] Extension `zaion-coordinator` - planejada
