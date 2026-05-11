@@ -1,0 +1,15 @@
+{
+  "name": "@openclaw/zaion-todowrite",
+  "version": "0.1.0",
+  "description": "TodoWrite tool for in-session task tracking (anti-drift)",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@openclaw/plugin-sdk": "workspace:*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
