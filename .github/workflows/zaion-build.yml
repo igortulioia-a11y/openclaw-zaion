@@ -18,15 +18,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Patch build files for fork (no-frozen-lockfile + minimumReleaseAge=0)
+      - name: Patch build config for fork
         run: |
+          # Allow lockfile updates for our extension workspace addition
           cp Dockerfile Dockerfile.zaion
           sed -i 's/--frozen-lockfile/--no-frozen-lockfile/g' Dockerfile.zaion
+          # Disable minimum release age (we install whatever pnpm resolves)
           sed -i 's/^minimumReleaseAge:.*$/minimumReleaseAge: 0/' pnpm-workspace.yaml
-          echo "--- Dockerfile.zaion patches ---"
-          grep -n 'no-frozen-lockfile' Dockerfile.zaion | head -5
-          echo "--- pnpm-workspace.yaml minimumReleaseAge ---"
-          grep -n 'minimumReleaseAge' pnpm-workspace.yaml | head -3
+          # Allow unused patchedDependencies (they target versions pnpm may not pin to)
+          # pnpm 9+ reads strictPatchedDependencies at root level
+          if ! grep -q '^strictPatchedDependencies' pnpm-workspace.yaml; then
+            echo '' >> pnpm-workspace.yaml
+            echo 'strictPatchedDependencies: false' >> pnpm-workspace.yaml
+          fi
+          echo '--- Verifying patches ---'
+          grep -nE 'no-frozen-lockfile' Dockerfile.zaion | head -3
+          grep -nE '^(minimumReleaseAge|strictPatchedDependencies)' pnpm-workspace.yaml
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
