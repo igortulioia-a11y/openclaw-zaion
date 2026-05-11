@@ -1,8 +1,6 @@
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { Type } from "@sinclair/typebox";
 
-// Per-agent session todo state (kept in plugin process memory; resets on restart).
-// For cross-session persistence, a future iteration may write to a workspace file.
 const sessionTodos = new Map<string, TodoItem[]>();
 
 type TodoItem = {
@@ -25,15 +23,13 @@ const TodoSchema = Type.Object({
 
 function renderTodos(todos: TodoItem[]): string {
   if (todos.length === 0) return "(no todos)";
-  const lines: string[] = [];
-  for (const t of todos) {
+  const lines = todos.map((t) => {
     const mark = t.status === "completed" ? "[x]" : t.status === "in_progress" ? "[~]" : "[ ]";
     const label = t.status === "in_progress" ? t.activeForm : t.content;
     const suffix = t.status === "in_progress" ? "  <-- in progress" : "";
-    lines.push(`${mark} ${label}${suffix}`);
-  }
-  return lines.join("
-");
+    return `${mark} ${label}${suffix}`;
+  });
+  return lines.join(String.fromCharCode(10));
 }
 
 function sessionKey(agentId: string, sessionId: string): string {
@@ -59,23 +55,19 @@ export default definePluginEntry({
           description: "Ordered list replacing the current session todos.",
         }),
       }),
-      async execute(toolCallId, params, ctx) {
+      async execute(toolCallId: string, params: { todos: TodoItem[] }, ctx?: { agentId?: string; sessionId?: string }) {
         const agentId = ctx?.agentId ?? "default";
         const sessionId = ctx?.sessionId ?? "session";
         const key = sessionKey(agentId, sessionId);
-        const todos = params.todos as TodoItem[];
+        const todos = params.todos;
 
-        // Validate: at most one in_progress
         const inProgress = todos.filter((t) => t.status === "in_progress");
         if (inProgress.length > 1) {
           return {
             content: [
               {
                 type: "text",
-                text:
-                  "ERROR: more than one task is in_progress. " +
-                  "Exactly one task may be in_progress at a time. " +
-                  "Mark all but one as pending or completed and retry.",
+                text: "ERROR: more than one task is in_progress. Exactly one task may be in_progress at a time. Mark all but one as pending or completed and retry.",
               },
             ],
             isError: true,
@@ -89,17 +81,13 @@ export default definePluginEntry({
           completed: todos.filter((t) => t.status === "completed").length,
         };
 
+        const header = `Todos updated (${counts.completed}/${todos.length} completed, ${counts.in_progress} in progress, ${counts.pending} pending):`;
+        const body = renderTodos(todos);
         return {
           content: [
             {
               type: "text",
-              text: [
-                `Todos updated (${counts.completed}/${todos.length} completed, ` +
-                  `${counts.in_progress} in progress, ${counts.pending} pending):`,
-                "",
-                renderTodos(todos),
-              ].join("
-"),
+              text: `${header}${String.fromCharCode(10, 10)}${body}`,
             },
           ],
         };
