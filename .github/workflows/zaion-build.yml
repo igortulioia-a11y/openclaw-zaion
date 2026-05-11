@@ -43,3 +43,4 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/openclaw-zaion:sha-${{ steps.sha.outputs.short }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+# trigger reindex
