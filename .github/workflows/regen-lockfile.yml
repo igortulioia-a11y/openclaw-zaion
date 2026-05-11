@@ -28,12 +28,15 @@ jobs:
 
       - name: Patch pnpm-workspace.yaml for fork
         run: |
-          # 1. Drop minimum release age gate
           sed -i 's/^minimumReleaseAge:.*$/minimumReleaseAge: 0/' pnpm-workspace.yaml
-          # 2. Drop patchedDependencies section (causes ERR_PNPM_UNUSED_PATCH on regen with our extension)
           sed -i '/^patchedDependencies:/,$d' pnpm-workspace.yaml
-          echo '--- Patched workspace ---'
-          tail -25 pnpm-workspace.yaml
+          # Allow git-resolved deps (libsignal is fetched from github by baileys)
+          if ! grep -q '^blockExoticSubdeps' pnpm-workspace.yaml; then
+            echo '' >> pnpm-workspace.yaml
+            echo 'blockExoticSubdeps: false' >> pnpm-workspace.yaml
+          fi
+          echo '--- Patched workspace tail ---'
+          tail -30 pnpm-workspace.yaml
 
       - name: Generate pnpm-lock.yaml
         run: |
@@ -48,6 +51,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: regen pnpm-lock with fork patches (minimumReleaseAge=0, no patchedDependencies)"
+            git commit -m "chore: regen pnpm-lock with fork patches (minimumReleaseAge=0, no patchedDeps, blockExoticSubdeps=false)"
             git push
           fi
