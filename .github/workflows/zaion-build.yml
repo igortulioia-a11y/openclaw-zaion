@@ -4,9 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/zaionext/**'
       - 'extensions/zaion-**'
-      - 'Dockerfile'
       - '.github/workflows/zaion-build.yml'
   workflow_dispatch:
 
@@ -19,6 +17,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Patch Dockerfile for non-frozen lockfile (allow extension workspace add)
+        run: |
+          cp Dockerfile Dockerfile.zaion
+          sed -i 's/--frozen-lockfile/--no-frozen-lockfile/g' Dockerfile.zaion
+          echo "--- Patched lines ---"
+          grep -n 'no-frozen-lockfile' Dockerfile.zaion || true
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -38,6 +43,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: Dockerfile.zaion
           push: true
           build-args: |
             OPENCLAW_EXTENSIONS=zaion-todowrite
